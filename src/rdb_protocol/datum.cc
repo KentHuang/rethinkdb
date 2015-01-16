@@ -927,6 +927,7 @@ std::string datum_t::encode_tag_num(uint64_t tag_num) {
 }
 
 std::string datum_t::compose_secondary(
+    reql_version_t rv, 
     const std::string &secondary_key,
     const store_key_t &primary_key,
     boost::optional<uint64_t> tag_num) {
@@ -947,12 +948,12 @@ std::string datum_t::compose_secondary(
     }
 
     const std::string truncated_secondary_key =
-        secondary_key.substr(0, trunc_size(primary_key_string.length()));
+        secondary_key.substr(0, trunc_size(rv, primary_key_string.length()));
 
     return mangle_secondary(truncated_secondary_key, primary_key_string, tag_string);
 }
 
-std::string datum_t::print_secondary(reql_version_t reql_version,
+std::string datum_t::print_secondary(reql_version_t rv,
                                      const store_key_t &primary_key,
                                      boost::optional<uint64_t> tag_num) const {
     std::string secondary_key_string;
@@ -979,7 +980,7 @@ std::string datum_t::print_secondary(reql_version_t reql_version,
             get_type_name().c_str(), trunc_print().c_str()));
     }
 
-    switch (reql_version) {
+    switch (rv) {
     case reql_version_t::v1_13:
         break;
     case reql_version_t::v1_14: // v1_15 is the same as v1_14
@@ -990,7 +991,7 @@ std::string datum_t::print_secondary(reql_version_t reql_version,
         unreachable();
     }
 
-    return compose_secondary(secondary_key_string, primary_key, tag_num);
+    return compose_secondary(rv, secondary_key_string, primary_key, tag_num);
 }
 
 void parse_secondary(const std::string &key,
@@ -1051,7 +1052,7 @@ boost::optional<uint64_t> datum_t::extract_tag(const store_key_t &key) {
 // but the amount truncated depends on the length of the primary key.  Since we
 // do not know how much was truncated, we have to truncate the maximum amount,
 // then return all matches and filter them out later.
-store_key_t datum_t::truncated_secondary() const {
+store_key_t datum_t::truncated_secondary(reql_version_t rv) const {
     std::string s;
     if (get_type() == R_NUM) {
         num_to_str_key(&s);
@@ -1073,8 +1074,9 @@ store_key_t datum_t::truncated_secondary() const {
     }
 
     // Truncate the key if necessary
-    if (s.length() >= max_trunc_size()) {
-        s.erase(max_trunc_size());
+    size_t mts = max_trunc_size(rv);
+    if (s.length() >= mts) {
+        s.erase(mts);
     }
 
     return store_key_t(s);
@@ -1583,15 +1585,23 @@ datum_t to_datum(const Datum *d, const configured_limits_t &limits,
     }
 }
 
-size_t datum_t::max_trunc_size() {
-    return trunc_size(rdb_protocol::MAX_PRIMARY_KEY_SIZE);
+size_t datum_t::max_trunc_size(reql_version_t rv) {
+    return trunc_size(rv, rdb_protocol::MAX_PRIMARY_KEY_SIZE);
 }
 
-size_t datum_t::trunc_size(size_t primary_key_size) {
+size_t datum_t::trunc_size(reql_version_t rv, size_t primary_key_size) {
     // We subtract three bytes because of the NULL byte we pad on the end of the
     // primary key and the two 1-byte offsets at the end of the key (which are
     // used to extract the primary key and tag num).
-    return MAX_KEY_SIZE - primary_key_size - tag_size - 3;
+    size_t terminated_primary_key_size = primary_key_size;
+    switch (rv) {
+    case reql_version_t::v1_13: // fallthru
+    case reql_version_t::v1_14: break;
+    case reql_version_t::v1_16_is_latest:
+        terminated_primary_key_size += 1;
+    default: unreachable();
+    }
+    return MAX_KEY_SIZE - terminated_primary_key_size - tag_size - 2;
 }
 
 bool datum_t::key_is_truncated(const store_key_t &key) {
@@ -1999,13 +2009,13 @@ key_range_t datum_range_t::to_primary_keyrange() const {
             : store_key_t::max());
 }
 
-key_range_t datum_range_t::to_sindex_keyrange() const {
+key_range_t datum_range_t::to_sindex_keyrange(reql_version_t rv) const {
     return rdb_protocol::sindex_key_range(
         left_bound.has()
-            ? store_key_t(left_bound.truncated_secondary())
+            ? store_key_t(left_bound.truncated_secondary(rv))
             : store_key_t::min(),
         right_bound.has()
-            ? store_key_t(right_bound.truncated_secondary())
+            ? store_key_t(right_bound.truncated_secondary(rv))
             : store_key_t::max());
 }
 

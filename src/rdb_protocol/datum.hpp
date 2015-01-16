@@ -191,7 +191,8 @@ public:
     std::string print_primary() const;
     /* TODO: All of this key-mangling logic belongs elsewhere. Maybe
     `print_primary()` belongs there as well. */
-    static std::string compose_secondary(const std::string &secondary_key,
+    static std::string compose_secondary(reql_version_t rv,
+                                         const std::string &secondary_key,
                                          const store_key_t &primary_key,
                                          boost::optional<uint64_t> tag_num);
     static std::string mangle_secondary(const std::string &secondary,
@@ -210,7 +211,7 @@ public:
             const std::string &secondary_and_primary);
     static boost::optional<uint64_t> extract_tag(const store_key_t &key);
     static components_t extract_all(const std::string &secondary_and_primary);
-    store_key_t truncated_secondary() const;
+    store_key_t truncated_secondary(reql_version_t rv) const;
     void check_type(type_t desired, const char *msg = NULL) const;
     void type_error(const std::string &msg) const NORETURN;
 
@@ -288,8 +289,8 @@ public:
                       const char *test, const char *file, int line,
                       std::string msg) const NORETURN;
 
-    static size_t max_trunc_size();
-    static size_t trunc_size(size_t primary_key_size);
+    static size_t max_trunc_size(reql_version_t rv);
+    static size_t trunc_size(reql_version_t rv, size_t primary_key_size);
     /* Note key_is_truncated returns true if the key is of max size. This gives
      * a false positive if the sum sizes of the keys is exactly the maximum but
      * not over at all. This means that a key of exactly max_trunc_size counts
@@ -410,7 +411,7 @@ public:
     // Make sure you know what you're doing if you call these, and think about
     // truncated sindexes.
     key_range_t to_primary_keyrange() const;
-    key_range_t to_sindex_keyrange() const;
+    key_range_t to_sindex_keyrange(reql_version_t rv) const;
 
     datum_range_t with_left_bound(datum_t d, key_range_t::bound_t type);
     datum_range_t with_right_bound(datum_t d, key_range_t::bound_t type);

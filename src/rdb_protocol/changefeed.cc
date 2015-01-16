@@ -806,10 +806,12 @@ public:
             default: unreachable();
             }
         }
+        reql_version_t rv =
+            ref.sindex_info->mapping_version_info.latest_compatible_reql_version;
         rdb_rget_secondary_slice(
             ref.btree,
             srange,
-            region_t(srange.to_sindex_keyrange()),
+            region_t(srange.to_sindex_keyrange(rv)),
             ref.superblock,
             env,
             batchspec_t::all(), // Terminal takes care of early termination
