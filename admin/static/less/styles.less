@@ -1018,14 +1018,28 @@ TODO: retire this
             }
         }
     }
-    #log-view {
-        h2.title {
+    .recent-logs {
+        & > h2.title {
             border-bottom: thin solid #f0f0f0;
             padding-bottom: 22px;
             margin-bottom: 0;
         }
         .btn.view-logs { float: right; }
         ul.log-entries { margin-bottom: 5px; }
+        // This overrides some of the common styles used on other log pages
+        #log-view {
+            .header {
+                display: none;
+            }
+            padding: 0px;
+            border: 0px;
+            .log-entry {
+                padding-top: 5px;
+                padding-bottom: 5px;
+                background-position: left center;
+            }
+
+        }
     }
 }
 /*
@@ -1469,8 +1483,12 @@ TODO: retire this
                 background: left center no-repeat url('images/clock-icon.png');
                 text-align: right;
                 color: #c4c4c4;
+                padding-left: 20px;
             }
         }
+    }
+    .no-logs {
+        display: none;
     }
     .no-more-entries{
         font-family: @sans;
