@@ -715,7 +715,8 @@ done_traversing_t rget_cb_t::handle_pair(
 
     // Load the key and value.
     store_key_t key(keyvalue.key());
-    if (sindex && !sindex->pkey_range.contains_key(ql::datum_t::extract_primary(key))) {
+    if (sindex && !sindex->pkey_range.contains_key(
+            ql::datum_t::extract_primary(sindex->func_reql_version, key))) {
         return done_traversing_t::NO;
     }
 

@@ -504,7 +504,6 @@ boost::optional<read_t> sindex_readgen_t::sindex_sort_read(
     if (sorting != sorting_t::UNORDERED && items.size() > 0) {
         const store_key_t &key = items[items.size() - 1].key;
         if (datum_t::key_is_truncated(key)) {
-            std::string skey = datum_t::extract_secondary(key_to_unescaped_str(key));
             // We need to truncate the skey down to the smallest *guaranteed*
             // length of secondary index keys in the btree.
             // This is important because the prefix of a truncated sindex key
@@ -514,7 +513,8 @@ boost::optional<read_t> sindex_readgen_t::sindex_sort_read(
             // next step might miss some relevant keys that have been truncated
             // differently. (the lack of this was the cause of
             // https://github.com/rethinkdb/rethinkdb/issues/3444)
-            skey.erase(datum_t::max_trunc_size());
+            std::string skey =
+                datum_t::extract_truncated_secondary(key_to_unescaped_str(key));
             key_range_t rng = active_range;
             if (!reversed(sorting)) {
                 // We construct a right bound that's larger than the maximum
